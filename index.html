@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+	<title>D3</title>
+
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto+Slab" rel="stylesheet">
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<link href="css/main.css" rel="stylesheet">
+	<link href="css/fonts.css" rel="stylesheet">
+	<style>
+	</style>
+</head>
+<body>
+	<div class="jumbotron">
+      <div class="container">
+        <h1 class="display-3">O Semi Arido</h1>
+        <p>Neste lab, o objetivo é experimentar com a criação de mapas com diferentes variáveis. Trabalharemos no nível dos municípios, e com o sertão (também conhecido como semiárido, ou SAB/sab para encurtar) brasileiro.(os municípios em preto são os que não foi possivel obter os dados)</p>
+      </div>
+    </div>
+
+	
+
+	<div class="container">
+		<div class="row">
+			<div id="chart" class="col-xs-6">
+				<h2>Quantidade de ligações ativas de Agua</h2>
+				<p>O mapa abaixo mostra em tons de azul a quantidade
+				de ligações de água em cada cidade do semiárido.</p>
+			</div>
+			<div id="chart2" class="col-xs-6">
+				<h2>Quantidade de ligações ativas de Esgoto</h2>
+				<p>O mapa abaixo mostra em tons de laranja a quantidade
+				de ligações de esgoto em cada cidade do semiárido.</p>
+			</div>
+			
+			<div id="chart3" class="col-xs-6">
+				<h2>Porcentagem de coleta </h2>
+				<p>O mapa abaixo mostra em tons de verde as cidades
+				que possui uma alta cobertura de coleta de resíduo
+				domiciliar e em vermelho os que possuem baixa cobertura,
+				em cores intermediarias os que possuem coberturas
+				media/baixa e media/alta.</p>
+			</div>
+		</div>
+	</div>
+
+	<footer></footer>
+
+	<!-- scripts -->
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://d3js.org/d3-color.v1.min.js"></script>
+	<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="https://d3js.org/topojson.v1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
+	<script>
+		var
+		    width = 1000,
+		    height = 500;
+		    scale = 2000 * .989;
+		var svg = d3.select("#chart")
+				.append("svg")
+				.attr('version', '1.1')
+				.attr('viewBox', '0 0 '+width+' '+height)
+				.attr('width', '150%')
+				.attr('class', 'map-chart');
+		var legendRectSize = 18;                                  // NEW
+        var legendSpacing = 4;
+		var projection = d3.geoAlbers()
+							.center([-38.820037, -10.395265])
+							.rotate([0, 0])
+							.parallels([0, 0])
+							.scale(2000);
+							
+		var path = d3.geoPath().projection(projection);
+		
+		var populacaoScale = d3.scaleThreshold();
+		var demandaScale = d3.scaleLinear();
+		
+				d3.queue()
+					.defer(d3.json, "municipios_sab.json")
+					//~ .defer(d3.csv, "info_agua.csv")
+					.defer(d3.csv, "data_parali.csv")
+					.await(draw);
+					
+							
+		function draw(error, semi_arido, populacaoXdemanda) {
+			 if (error) throw error;
+			  var municipios = topojson.feature(semi_arido, semi_arido.objects.municipios_sab);
+
+			populacaoScale
+				.domain([1000, 5000, 25000, 50000, 125763])
+				.range([d3.rgb(8, 48, 107, 0.2), 
+						d3.rgb(8, 48, 107, 0.4), 
+						d3.rgb(8, 48, 107, 0.6), 
+						d3.rgb(8, 48, 107, 0.8), 
+						d3.rgb(8, 48, 107, 1)]);
+
+
+			  svg.selectAll(".municipios")
+				.data(municipios.features)
+			  .enter().append("path")
+			  //AS002...Quantidade.de.ligações.ativas.de.agua..Ligações.
+				.attr("id", function(d) {return "AREA_KM2-"+d.properties.ID; })
+				
+
+				
+				.attr("d", path);
+					for (var i = 0; i < populacaoXdemanda.length; i++) {
+						svg.select("#AREA_KM2-"+populacaoXdemanda[i].GEOCODIGO)
+								//~ .attr("fill", populacaoScale(+populacaoXdemanda[i].Quantidade_Paralizacao));
+								.attr("fill", populacaoScale(+populacaoXdemanda[i].AG002));
+
+						}
+						
+						
+							svg.append("g")
+			  .attr("class", "legendThreshold")
+			  .attr("transform", "translate(20,20)");
+
+			var legend = d3.legendColor()
+			  .labelFormat(d3.format(".2f"))
+			  .title("Quantidade de ligações ativas de Agua")
+			  .shapeWidth(30)
+			  .scale(populacaoScale);
+
+			svg.select(".legendThreshold")
+			  .call(legend);
+		}
+		
+		//============================================
+		
+		var svg2 = d3.select("#chart2")
+				.append("svg")
+				.attr('version', '1.1')
+				.attr('viewBox', '0 0 '+width+' '+height)
+				.attr('width', '150%')
+				.attr('class', 'map-chart');
+		
+		var projection2 = d3.geoAlbers()
+							.center([-38.820037, -10.395265])
+							.rotate([0, 0])
+							.parallels([0, 0])
+							.scale(2000);
+							
+		var path2 = d3.geoPath().projection(projection2);
+		
+		var populacaoScale2 = d3.scaleThreshold();
+		var demandaScale2 = d3.scaleLinear();
+		
+				d3.queue()
+					.defer(d3.json, "municipios_sab.json")
+					//~ .defer(d3.csv, "info_agua.csv")
+					.defer(d3.csv, "data_parali.csv")
+					.await(draw2);
+					
+							
+		function draw2(error, semi_arido, populacaoXdemanda) {
+			 if (error) throw error;
+			  var municipios = topojson.feature(semi_arido, semi_arido.objects.municipios_sab);
+
+			populacaoScale2
+				.domain([1000, 5000, 20000, 40000, 98449])
+				.range([d3.rgb(255, 102, 0, 0.2),
+						d3.rgb(255, 102, 0, 0.4), 
+						d3.rgb(255, 102, 0, 0.6), 
+						d3.rgb(255, 102, 0, 0.8), 
+						d3.rgb(255, 102, 0, 1)]);
+
+			  svg2.selectAll(".municipios")
+				.data(municipios.features)
+			  .enter().append("path")
+			  //ES002...Quantidade.de.ligações.ativas.de.esgotos..Ligações.
+				.attr("id", function(d) {return "AREA_KM2-"+d.properties.ID; })
+				.attr("d", path);
+					for (var i = 0; i < populacaoXdemanda.length; i++) {
+						svg2.select("#AREA_KM2-"+populacaoXdemanda[i].GEOCODIGO)
+								//~ .attr("fill", populacaoScale(+populacaoXdemanda[i].Quantidade_Paralizacao));
+								.attr("fill", populacaoScale2(+populacaoXdemanda[i].ES002));
+
+						}
+						
+
+			  
+			//====================================
+			  
+			svg2.append("g")
+			  .attr("class", "legendThreshold")
+			  .attr("transform", "translate(20,20)");
+
+			var legend2 = d3.legendColor()
+			  .labelFormat(d3.format(".2f"))
+			  .title("Quantidade de ligações ativas de Esgoto")
+			  .shapeWidth(30)
+			  .scale(populacaoScale2);
+
+			svg2.select(".legendThreshold")
+			  .call(legend2);
+
+
+		}
+		
+		//============================================
+		
+		var svg3 = d3.select("#chart3")
+				.append("svg")
+				.attr('version', '1.1')
+				.attr('viewBox', '0 0 '+width+' '+height)
+				.attr('width', '150%')
+				.attr('class', 'map-chart');
+		
+		var projection3 = d3.geoAlbers()
+							.center([-38.820037, -10.395265])
+							.rotate([0, 0])
+							.parallels([0, 0])
+							.scale(2000);
+							
+		var path3 = d3.geoPath().projection(projection3);
+		
+		var populacaoScale3 = d3.scaleThreshold();
+		var demandaScale3 = d3.scaleLinear();
+		
+				d3.queue()
+					.defer(d3.json, "municipios_sab.json")
+					//~ .defer(d3.csv, "info_agua.csv")
+					.defer(d3.csv, "data_parali.csv")
+					.await(draw3);
+					
+							
+		function draw3(error, semi_arido, populacaoXdemanda) {
+			 if (error) throw error;
+			  var municipios = topojson.feature(semi_arido, semi_arido.objects.municipios_sab);
+
+			populacaoScale3
+				.domain([25, 50, 75, 100])
+				.range([d3.rgb(255, 0, 0, 1),
+						d3.rgb(255, 153, 102, 1), 
+						d3.rgb(153, 255, 204, 1), 
+						d3.rgb(0, 255, 0, 1)]);
+
+			  svg3.selectAll(".municipios")
+				.data(municipios.features)
+			  .enter().append("path")
+			  //ES002...Quantidade.de.ligações.ativas.de.esgotos..Ligações.
+				.attr("id", function(d) {return "AREA_KM2-"+d.properties.ID; })
+				.attr("d", path);
+					for (var i = 0; i < populacaoXdemanda.length; i++) {
+						svg3.select("#AREA_KM2-"+populacaoXdemanda[i].GEOCODIGO)
+								//~ .attr("fill", populacaoScale(+populacaoXdemanda[i].Quantidade_Paralizacao));
+								.attr("fill", populacaoScale3(+populacaoXdemanda[i].IN014));
+
+						}
+						
+
+			  
+			//====================================
+			  
+			svg3.append("g")
+			  .attr("class", "legendThreshold")
+			  .attr("transform", "translate(20,20)");
+
+			var legend3 = d3.legendColor()
+			  .labelFormat(d3.format(".2f"))
+			  .title("Quantidade de ligações ativas de Esgoto")
+			  .shapeWidth(30)
+			  .scale(populacaoScale3);
+
+			svg3.select(".legendThreshold")
+			  .call(legend3);
+
+
+		}
+		</script>
+
+</body>
+</html>
+
+
+<!--
+codigo para rodar o servidor python:
+python2 -m SimpleHTTPServer 8080
+-->
